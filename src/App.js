@@ -21,6 +21,7 @@ import {
   clearAuthData,
   isAuthenticated
 } from './services/authService';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('login');
@@ -152,7 +153,11 @@ function App() {
   const renderScreen = () => {
     // Auth screens
     if (currentScreen === 'login') {
-      return <Login onLogin={handleLogin} setCurrentScreen={setCurrentScreen} />;
+      return <Login
+  onLogin={handleLogin}
+  setCurrentScreen={setCurrentScreen}
+  setAuthenticated={setAuthenticated}
+/>;
     }
 
     if (currentScreen === 'signup') {
@@ -228,6 +233,7 @@ function App() {
   }
 
   return (
+     <AuthProvider>
     <div className="App">
       {authenticated && (
         <Navbar
@@ -239,6 +245,7 @@ function App() {
       )}
       {renderScreen()}
     </div>
+    </AuthProvider>
   );
 }
 

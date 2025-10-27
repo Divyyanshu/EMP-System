@@ -1,7 +1,10 @@
 import React, { useState } from "react";
-import { Mail, Lock, AlertCircle } from "lucide-react";
+import axios from "axios";
+import { Mail, Lock, AlertCircle, CheckCircle } from "lucide-react";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-const Login = ({ onLogin, setCurrentScreen }) => {
+const Login = ({ onLogin, setCurrentScreen, setAuthenticated }) => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -9,27 +12,99 @@ const Login = ({ onLogin, setCurrentScreen }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ✅ Login API Call with Debug Logs
+  const loginUser = async (email, password) => {
+    console.log("🟦 [API CALL START] Logging in user...");
+    console.log("📤 Payload:", { email });
+
+    try {
+      const response = await axios.post(
+        "https://backend-tasks-xagf.onrender.com/users/login",
+        { email, password },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("🟩 [API RESPONSE SUCCESS]:", response.data);
+
+      if (response?.data?.token) {
+        toast.success("Login successful!", {
+          position: "top-right",
+          autoClose: 2500,
+          theme: "colored",
+          icon: <CheckCircle />,
+        });
+
+        // ✅ Save token & user details locally
+        localStorage.setItem("userToken", response.data.token);
+        localStorage.setItem("userId", response.data.userid);
+        localStorage.setItem("userName", response.data.userName);
+        console.log("💾 Token & User Info Saved to localStorage");
+        console.log("username ??>>>", response.data.userName);
+
+        // ✅ Redirect (or set screen)
+        console.log("🔁 Redirecting to Home / Chat Screen...");
+        setAuthenticated(true);
+        setCurrentScreen("dashboard");
+        return response.data;
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (err) {
+      console.log("🟥 [API ERROR OCCURRED]:", err.response || err.message);
+      const msg =
+        err.response?.data?.message ||
+        "Login failed. Please check your credentials.";
+      setError(msg);
+      toast.error(msg, {
+        position: "top-right",
+        autoClose: 3000,
+        theme: "colored",
+        icon: <AlertCircle />,
+      });
+      throw err;
+    } finally {
+      console.log("🟨 [API CALL END]");
+    }
+  };
+
+  // ✅ Form Handler with Debug Logs
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.clear(); // clear console before each attempt
+    console.log("🟦 [FORM SUBMIT INITIATED]");
+    console.log("📋 Form Data:", formData);
     setError("");
 
+    // Validation
     if (!formData.email || !formData.password) {
+      console.warn("⚠️ Validation failed: Missing fields");
       setError("Please fill all fields");
+      toast.warning("Please fill all fields!", {
+        position: "top-right",
+        autoClose: 3000,
+      });
       return;
     }
 
     setLoading(true);
+    console.log("🟦 [LOGIN REQUEST TRIGGERED]");
     try {
-      await onLogin(formData.email, formData.password);
+      await loginUser(formData.email, formData.password);
     } catch (err) {
-      setError(err.message || "Login failed. Please try again.");
+      console.error("🟥 [LOGIN FAILED]:", err.message);
     } finally {
+      console.log("🟨 [LOGIN FLOW COMPLETE]");
       setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+      <ToastContainer />
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
@@ -46,6 +121,7 @@ const Login = ({ onLogin, setCurrentScreen }) => {
         )}
 
         <div className="space-y-4">
+          {/* Email Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Email
@@ -64,6 +140,7 @@ const Login = ({ onLogin, setCurrentScreen }) => {
             </div>
           </div>
 
+          {/* Password Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Password
@@ -82,6 +159,7 @@ const Login = ({ onLogin, setCurrentScreen }) => {
             </div>
           </div>
 
+          {/* Submit Button */}
           <button
             onClick={handleSubmit}
             disabled={loading}
@@ -91,6 +169,7 @@ const Login = ({ onLogin, setCurrentScreen }) => {
           </button>
         </div>
 
+        {/* Redirect to Signup */}
         <div className="mt-6 text-center">
           <p className="text-gray-600 text-sm">
             Don't have an account?{" "}
@@ -100,12 +179,6 @@ const Login = ({ onLogin, setCurrentScreen }) => {
             >
               Sign Up
             </button>
-          </p>
-        </div>
-
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-600 text-center">
-            Demo Login: demo@example.com / demo123
           </p>
         </div>
       </div>
